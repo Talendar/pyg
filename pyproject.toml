@@ -3,9 +3,11 @@ requires = [
     "wheel",
     "setuptools<60.0",
 ]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "pyg"
+version = "0.0.1"
 author = "Gabriel Nogueira (Talendar)"
 license = {file = "LICENSE"}
 description = "A simple graphics library for Python built on top of OpenGL and GLFW."
