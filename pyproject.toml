@@ -1,0 +1,19 @@
+[build-system]
+requires = [
+    "wheel",
+    "setuptools<60.0",
+]
+
+[project]
+name = "pyg"
+author = "Gabriel Nogueira (Talendar)"
+license = {file = "LICENSE"}
+description = "A simple graphics library for Python built on top of OpenGL and GLFW."
+requires-python = ">=3.9"
+dependencies = [
+    "numpy~=1.22.3",
+    "PyOpenGL~=3.1.6",
+    "PyOpenGL-accelerate~=3.1.5",
+    "glfw~=2.5.1",
+]
+readme = "README.md"
