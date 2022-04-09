@@ -3,11 +3,13 @@ from __future__ import annotations
 import ctypes
 import math
 from typing import TYPE_CHECKING, Final, Any, Optional, Callable
+from collections.abc import Sequence
 
 import OpenGL.GL as gl
 import OpenGL.GL.shaders
+import numpy as np
 
-from .utils import *
+from .utils import Coord2D, Coord3D, Color
 
 if TYPE_CHECKING:
     from .window import Window
@@ -20,10 +22,10 @@ _DEFAULT_COLOR = np.array([1, 0.5, 0.2, 1])
 #: Source code for the vertex shader.
 _VERTEX_SHADER_SRC: Final[str] = """
     #version 330 core
-    attribute vec2 pos;
+    attribute vec3 pos;
     
     void main() {
-        gl_Position = vec4(pos.x, pos.y, 0, 1.0);
+        gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
     }
 """
 
@@ -68,7 +70,7 @@ class Drawer:
 
     def _draw_primitive(
         self,
-        vertices: tuple[Coord2D, ...] | np.ndarray,
+        vertices: Sequence[Coord2D] | Sequence[Coord3D],
         primitive: Any,
         color: Optional[Color | np.ndarray] = None,
         before_draw: Optional[Callable[[], None]] = None,
@@ -82,9 +84,21 @@ class Drawer:
             color: The color of the object.
             before_draw: Callback fired just before the actual drawing occurs.
         """
-        vertices = normalize_array(vertices)
-        color = color if color is not None else _DEFAULT_COLOR
+        # Prepare, validate and pre-process the vertices.
+        vertices = np.array(vertices, dtype=np.float32)
+        assert len(vertices.shape) == 2
+        assert vertices.shape[1] in (2, 3)
+        if vertices.shape[1] == 2:
+            vertices = np.hstack([
+                vertices,
+                np.zeros((vertices.shape[0], 1), dtype=np.float32),
+            ])
 
+        # Set up a color if one wasn't provided.
+        if color is None:
+            color = _DEFAULT_COLOR
+
+        # Render.
         with self._window:
             # Activate the shader program.
             gl.glUseProgram(self._shader_program)
@@ -108,7 +122,7 @@ class Drawer:
             gl.glEnableVertexAttribArray(pos_attr_loc)
             gl.glVertexAttribPointer(
                 pos_attr_loc,
-                2,
+                3,
                 gl.GL_FLOAT,
                 False,
                 vertices.strides[0],
@@ -131,7 +145,7 @@ class Drawer:
             gl.glUseProgram(0)
 
     def point(self,
-              pos: Coord2D | np.ndarray,
+              pos: Coord2D | Coord3D | np.ndarray,
               point_size: int = 1,
               color: Optional[Color | np.ndarray] = None) -> None:
         """ Draws a single point at the given position.
@@ -143,14 +157,16 @@ class Drawer:
             color: The point's color.
         """
         self._draw_primitive(
-            vertices=tuple([pos]),
+            vertices=[pos],
             primitive=gl.GL_POINTS,
             color=color,
             before_draw=lambda: gl.glPointSize(point_size),
         )
 
     def line(self,
-             pos: tuple[Coord2D, Coord2D] | np.ndarray,
+             pos: (tuple[Coord2D, Coord2D] |
+                   tuple[Coord3D, Coord3D] |
+                   np.ndarray),
              line_width: int = 1,
              color: Optional[Color | np.ndarray] = None) -> None:
         """ Draws a line.
@@ -170,7 +186,9 @@ class Drawer:
         )
 
     def triangle(self,
-                 vertices: tuple[Coord2D, Coord2D, Coord2D] | np.ndarray,
+                 vertices: (tuple[Coord2D, Coord2D, Coord2D] |
+                            tuple[Coord3D, Coord3D, Coord3D] |
+                            np.ndarray),
                  color: Optional[Color | np.ndarray] = None) -> None:
         """ Draws a triangle from its vertices coordinates.
 
@@ -181,8 +199,8 @@ class Drawer:
         self._draw_primitive(vertices, gl.GL_TRIANGLES, color)
 
     def rect(self,
-             top_left: Coord2D | np.ndarray,
-             size: tuple[float, float],
+             top_left: Coord2D | Coord3D | np.ndarray,
+             size: tuple[float, float] | np.ndarray,
              color: Optional[Color | np.ndarray] = None) -> None:
         """ Draws a rectangle.
 
@@ -195,23 +213,29 @@ class Drawer:
             color: The rectangle's color.
         """
         size = np.array(size) * 2
-        top_right = (top_left[0] + size[0], top_left[1])
-        bottom_right = (top_left[0] + size[0], top_left[1] - size[1])
-        bottom_left = (top_left[0], top_left[1] - size[1])
+        top_left = np.array(top_left, dtype=np.float32)
+        other_vertices = np.array([
+            (top_left[0], top_left[1] - size[1]),            # bottom-left
+            (top_left[0] + size[0], top_left[1]),            # top-right
+            (top_left[0] + size[0], top_left[1] - size[1]),  # bottom-right
+        ], dtype=np.float32)
+
+        if len(top_left) == 3:
+            other_vertices = np.hstack([
+                other_vertices,
+                np.full([other_vertices.shape[0], 1],
+                        top_left[-1],
+                        dtype=np.float32),
+            ])
 
         self._draw_primitive(
-            vertices=(
-                top_left,
-                bottom_left,
-                top_right,
-                bottom_right,
-            ),
+            vertices=np.vstack([top_left, other_vertices]),
             primitive=gl.GL_TRIANGLE_STRIP,
             color=color,
         )
 
     def circle(self,
-               center_pos: Coord2D | np.ndarray,
+               center_pos: Coord2D | Coord3D | np.ndarray,
                radius: float,
                color: Optional[Color | np.ndarray] = None,
                quality_level: int = 64) -> None:
@@ -232,8 +256,17 @@ class Drawer:
             y = math.sin(angle) * radius + center_pos[1]
             vertices.append((x, y))
 
+        vertices = np.array(vertices, dtype=np.float32)
+        if len(center_pos) == 3:
+            vertices = np.hstack([
+                vertices,
+                np.full([vertices.shape[0], 1],
+                        center_pos[-1],
+                        dtype=np.float32),
+            ])
+
         self._draw_primitive(
-            vertices=np.array(vertices),
+            vertices=vertices,
             primitive=gl.GL_TRIANGLE_FAN,
             color=color,
         )
