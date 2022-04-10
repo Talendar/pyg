@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ctypes
 import math
-from typing import TYPE_CHECKING, Final, Any, Optional, Callable
+from typing import TYPE_CHECKING, Final, Optional, Callable
 from collections.abc import Sequence
 
 import OpenGL.GL as gl
@@ -10,6 +10,8 @@ import OpenGL.GL.shaders
 import numpy as np
 
 from .utils import Coord2D, Coord3D, Color
+from .enums.fill_mode import FillMode
+from .enums.primitive_shape import PrimitiveShape
 
 if TYPE_CHECKING:
     from .window import Window
@@ -22,10 +24,12 @@ _DEFAULT_COLOR = np.array([1, 0.5, 0.2, 1])
 #: Source code for the vertex shader.
 _VERTEX_SHADER_SRC: Final[str] = """
     #version 330 core
+    
     attribute vec3 pos;
+    uniform mat4 transform;
     
     void main() {
-        gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
+        gl_Position = transform * vec4(pos, 1.0);
     }
 """
 
@@ -68,20 +72,27 @@ class Drawer:
                 self._fragment_shader,
             )
 
-    def _draw_primitive(
+    def primitive(
         self,
         vertices: Sequence[Coord2D] | Sequence[Coord3D],
-        primitive: Any,
+        primitive: PrimitiveShape,
         color: Optional[Color | np.ndarray] = None,
+        transform: Optional[np.ndarray] = None,
         before_draw: Optional[Callable[[], None]] = None,
+        fill_mode: FillMode = FillMode.FILL,
     ):
         """ Draws a set of vertices using an OpenGL primitive.
 
         Args:
             vertices: The vertices of the object to be drawn.
-            primitive: The OpenGL [primitive](https://www.khronos.org/opengl/wiki/Primitive)
-                to be used as a reference to connect the vertices.
+            primitive: The OpenGL
+                [primitive](https://www.khronos.org/opengl/wiki/Primitive) to be
+                used as reference to connect the vertices.
+            fill_mode: Specifies how the drawn object should be filled.
             color: The color of the object.
+            transform: 4x4 numpy array representing a transformation matrix to
+                be applied to the object. If not matrix is specified (`None`),
+                the identity matrix is used.
             before_draw: Callback fired just before the actual drawing occurs.
         """
         # Prepare, validate and pre-process the vertices.
@@ -94,9 +105,13 @@ class Drawer:
                 np.zeros((vertices.shape[0], 1), dtype=np.float32),
             ])
 
+        # Use the identity matrix if no transformation was specified.
+        transform = (np.eye(4, dtype=np.float32) if transform is None
+                     else transform.astype(np.float32))
+
         # Set up a color if one wasn't provided.
-        if color is None:
-            color = _DEFAULT_COLOR
+        color = (_DEFAULT_COLOR if color is None
+                 else np.array(color, dtype=np.float32))
 
         # Render.
         with self._window:
@@ -129,15 +144,23 @@ class Drawer:
                 ctypes.c_void_p(0),
             )
 
+            # Set the transformation matrix.
+            transform_attr_loc = gl.glGetUniformLocation(self._shader_program,
+                                                         "transform")
+            gl.glUniformMatrix4fv(transform_attr_loc, 1, gl.GL_TRUE, transform)
+
             # Set the color of our object.
             color_attr_loc = gl.glGetUniformLocation(self._shader_program,
                                                      "color")
             gl.glUniform4f(color_attr_loc, *color)
 
+            # Specify how the object should be filled.
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, fill_mode.value)
+
             # Draw.
             if before_draw is not None:
                 before_draw()
-            gl.glDrawArrays(primitive, 0, len(vertices))
+            gl.glDrawArrays(primitive.value, 0, len(vertices))
 
             # Clean up.
             gl.glDisableVertexAttribArray(pos_attr_loc)
@@ -156,7 +179,7 @@ class Drawer:
                 specified by the current OpenGL's implementation.
             color: The point's color.
         """
-        self._draw_primitive(
+        self.primitive(
             vertices=[pos],
             primitive=gl.GL_POINTS,
             color=color,
@@ -178,7 +201,7 @@ class Drawer:
                 size specified by the current OpenGL's implementation.
             color: The line's color.
         """
-        self._draw_primitive(
+        self.primitive(
             vertices=pos,
             primitive=gl.GL_LINES,
             color=color,
@@ -196,7 +219,7 @@ class Drawer:
             vertices: The coordinates of the 3 vertices of the triangle.
             color: The triangle's color.
         """
-        self._draw_primitive(vertices, gl.GL_TRIANGLES, color)
+        self.primitive(vertices, gl.GL_TRIANGLES, color)
 
     def rect(self,
              top_left: Coord2D | Coord3D | np.ndarray,
@@ -228,7 +251,7 @@ class Drawer:
                         dtype=np.float32),
             ])
 
-        self._draw_primitive(
+        self.primitive(
             vertices=np.vstack([top_left, other_vertices]),
             primitive=gl.GL_TRIANGLE_STRIP,
             color=color,
@@ -265,7 +288,7 @@ class Drawer:
                         dtype=np.float32),
             ])
 
-        self._draw_primitive(
+        self.primitive(
             vertices=vertices,
             primitive=gl.GL_TRIANGLE_FAN,
             color=color,

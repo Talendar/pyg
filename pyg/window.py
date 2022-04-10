@@ -1,11 +1,14 @@
 from __future__ import annotations
-from typing import Optional
+
+from typing import Optional, Any
 from types import TracebackType
+from collections.abc import Callable
 
 import glfw
 import OpenGL.GL as gl
 
 from .drawer import Drawer
+from pyg.enums.events import Key, KeyboardAction
 
 
 class Window:
@@ -100,3 +103,63 @@ class Window:
         with self:
             gl.glClearColor(*color)
             gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+
+    def poll_events(self) -> None:
+        """ Processes the events that are already in the event queue, then
+        returns immediately.
+
+        This method is the best choice when rendering continuously, like most
+        games do. Processing events will cause the window and input callbacks
+        associated with those events to be called.
+        """
+        with self:
+            glfw.poll_events()
+
+    def wait_events(self) -> None:
+        """ Puts the current thread to sleep until at least one event has been
+        received, then processes all received events.
+
+        If you only need to update the contents of the window when you receive
+        new input, this method is a better choice than `Window.poll_events()`.
+        This method saves a great deal of CPU cycles and is useful for, for
+        example, editing tools.
+        """
+        with self:
+            glfw.wait_events()
+
+    def wait_events_timeout(self, timeout: float) -> None:
+        """ Puts the current thread to sleep until at least one event has been
+        received or until the specified number of seconds have elapsed. It then
+        processes any received events.
+
+        If you want to wait for events but have UI elements or other tasks that
+        need periodic updates, this method lets you specify a timeout.
+
+        Args:
+            timeout: The maximum waiting time, in seconds.
+        """
+        with self:
+            glfw.wait_events_timeout(timeout)
+
+    def post_empty_event(self) -> None:
+        """ Posts an empty event to wake up a thread put to sleep by
+        `Window.wait_events()` or `Window.wait_events_timeout()`
+        """
+        with self:
+            glfw.post_empty_event()
+
+    def set_key_callback(
+            self,
+            callback: Callable[[Key, KeyboardAction], None],
+    ) -> None:
+        """ Set up a callback to be fired when a physical key is pressed or
+        released or when it repeats.
+        """
+        def callback_wrapper(glfw_window: Any,
+                             key: int,
+                             scancode: int,
+                             action: int,
+                             mods: int) -> None:
+            callback(Key(key), KeyboardAction(action))
+
+        glfw.set_key_callback(self._glfw_window, callback_wrapper)

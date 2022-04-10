@@ -10,4 +10,6 @@ glfw.window_hint(glfw.OPENGL_PROFILE, glfw.OPENGL_CORE_PROFILE)
 
 # Exports
 from .window import Window
-from .events import poll_events
+from pyg.enums.events import Key, KeyboardAction
+from pyg.enums.fill_mode import FillMode
+from pyg.enums.primitive_shape import PrimitiveShape

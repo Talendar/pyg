@@ -35,7 +35,7 @@ if __name__ == "__main__":
         window.draw.rect((0.075, -0.4), (0.075, 0.5), color=(0, 1, 0, 1))
 
         # Poll for events and update the window.
-        pyg.poll_events()
+        window.poll_events()
         window.update()
 
         time.sleep(0.1)
