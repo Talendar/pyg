@@ -1,4 +1,4 @@
-""" Draws a Utah teapot and allows transformations to be applied to it.
+""" Draws a transformable Utah teapot using `pyg`.
 
 Controls:
     * Up and down arrow-keys: move the teapot along the y-axis.
@@ -14,9 +14,9 @@ import time
 
 
 FILL_MODE = pyg.FillMode.LINE
-TRANSLATION_STEP_SIZE = 0.02
-RESIZING_STEP_SIZE = 0.02
-ROTATION_STEP_SIZE = 0.04
+TRANSLATION_STEP_OFFSET = 0.03
+RESIZING_STEP_PC = 0.03
+ROTATION_STEP_ANGLE = 2.5
 
 
 #: Vertices a Utah teapot with 3 segments and 1 unit of radius.
@@ -1754,62 +1754,61 @@ TEAPOT_VERTICES = np.array([
 
 
 if __name__ == "__main__":
+    # Create and show a new window.
     window = pyg.Window(800, 800)
     window.name = "Utah teapot"
     window.show()
 
-    tx = ty = 0
-    sx = sy = 0.5
-    rx = np.pi
+    # Instantiate the graphic object representing the teapot.
+    teapot = pyg.objects.GraphicObject(
+        vertices=TEAPOT_VERTICES,
+        primitive=pyg.PrimitiveShape.TRIANGLES,
+        fill_mode=FILL_MODE,
+    )
 
+    # Perform some initial transformations on the teapot.
+    teapot.transform.scale(sx=0.5, sy=0.5)
+    teapot.transform.rotate(angle=180, axis="x")
+
+    # Callback to handle keyboard events.
     def handle_key_event(key: pyg.Key, action: pyg.KeyboardAction) -> None:
-        global tx, ty, sx, sy, rx
         if action not in (pyg.KeyboardAction.PRESS, pyg.KeyboardAction.REPEAT):
             return
 
         # Translation
         if key == pyg.Key.LEFT:
-            tx -= TRANSLATION_STEP_SIZE
+            teapot.transform.translate(tx=-TRANSLATION_STEP_OFFSET)
         elif key == pyg.Key.RIGHT:
-            tx += TRANSLATION_STEP_SIZE
+            teapot.transform.translate(tx=TRANSLATION_STEP_OFFSET)
         elif key == pyg.Key.UP:
-            ty += TRANSLATION_STEP_SIZE
+            teapot.transform.translate(ty=TRANSLATION_STEP_OFFSET)
         elif key == pyg.Key.DOWN:
-            ty -= TRANSLATION_STEP_SIZE
+            teapot.transform.translate(ty=-TRANSLATION_STEP_OFFSET)
         # Resizing
         elif key == pyg.Key.A:
-            sx -= RESIZING_STEP_SIZE
+            teapot.transform.scale(sx=1 - RESIZING_STEP_PC)
         elif key == pyg.Key.D:
-            sx += RESIZING_STEP_SIZE
+            teapot.transform.scale(sx=1 + RESIZING_STEP_PC)
         elif key == pyg.Key.S:
-            sy -= RESIZING_STEP_SIZE
+            teapot.transform.scale(sy=1 - RESIZING_STEP_PC)
         elif key == pyg.Key.W:
-            sy += RESIZING_STEP_SIZE
+            teapot.transform.scale(sy=1 + RESIZING_STEP_PC)
         # Rotation (X-axis)
         elif key == pyg.Key.Q:
-            rx -= ROTATION_STEP_SIZE
+            teapot.transform.rotate(angle=-ROTATION_STEP_ANGLE, axis="x")
         elif key == pyg.Key.E:
-            rx += ROTATION_STEP_SIZE
+            teapot.transform.rotate(angle=ROTATION_STEP_ANGLE, axis="x")
 
+    # Set the callback.
     window.set_key_callback(handle_key_event)
 
+    # Main loop.
     while not window.should_close():
         # Clear the window.
         window.clear()
 
         # Draw the teapot.
-        cos_ry, sin_ry = np.cos(rx), np.sin(rx)
-        window.draw.primitive(
-            vertices=TEAPOT_VERTICES,
-            primitive=pyg.PrimitiveShape.TRIANGLES,
-            fill_mode=FILL_MODE,
-            transform=np.array([
-                [sx, 0, 0, tx],
-                [0, sy * cos_ry, -sin_ry, ty],
-                [0, sin_ry, cos_ry, 0],
-                [0, 0, 0, 1],
-            ]),
-        )
+        window.draw(teapot)
 
         # Poll for events and update the window.
         window.wait_events()

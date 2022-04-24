@@ -1,3 +1,6 @@
+""" Draw simple shapes on a window using `pyg`.
+"""
+
 import pyg
 import time
 
@@ -27,8 +30,8 @@ if __name__ == "__main__":
 
         # Draw head and eyes.
         window.draw.circle((0, 0.75), radius=0.25, color=(1, 1, 1, 1))
-        window.draw.point((-0.1, 0.8), 12, color=(0, 0, 0, 1))
-        window.draw.point((0.1, 0.8), 12, color=(0, 0, 0, 1))
+        window.draw.dot((-0.1, 0.8), 12, color=(0, 0, 0, 1))
+        window.draw.dot((0.1, 0.8), 12, color=(0, 0, 0, 1))
 
         # Draw legs.
         window.draw.rect((-0.225, -0.4), (0.075, 0.5), color=(0, 1, 0, 1))

@@ -1,3 +1,6 @@
+""" Implements a class that represents a window in the application.
+"""
+
 from __future__ import annotations
 
 from typing import Optional, Any
@@ -7,7 +10,7 @@ from collections.abc import Callable
 import glfw
 import OpenGL.GL as gl
 
-from .drawer import Drawer
+from pyg.drawer import Drawer
 from pyg.enums.events import Key, KeyboardAction
 
 
@@ -155,6 +158,7 @@ class Window:
         """ Set up a callback to be fired when a physical key is pressed or
         released or when it repeats.
         """
+        # pylint: disable=W0613
         def callback_wrapper(glfw_window: Any,
                              key: int,
                              scancode: int,

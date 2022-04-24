@@ -1,24 +1,19 @@
+""" Implementation of a drawer, which abstracts the drawing of basic shapes in a
+:class:`Window`.
+"""
+
 from __future__ import annotations
 
 import ctypes
-import math
-from typing import TYPE_CHECKING, Final, Optional, Callable
-from collections.abc import Sequence
+from typing import TYPE_CHECKING, Final
 
-import OpenGL.GL as gl
-import OpenGL.GL.shaders
-import numpy as np
+import OpenGL.GL as gl  # noqa
+import OpenGL.GL.shaders  # pylint: disable=[W0611]
 
-from .utils import Coord2D, Coord3D, Color
-from .enums.fill_mode import FillMode
-from .enums.primitive_shape import PrimitiveShape
+from .objects import GraphicObject, Dot, Line, Triangle, Rectangle, Circle
 
 if TYPE_CHECKING:
     from .window import Window
-
-
-#: Default color of the objects.
-_DEFAULT_COLOR = np.array([1, 0.5, 0.2, 1])
 
 
 #: Source code for the vertex shader.
@@ -45,7 +40,7 @@ _FRAGMENT_SHADER_SRC: Final[str] = """
 
 
 class Drawer:
-    """ Abstracts the drawing of basic shapes in a window. """
+    """ Abstracts the drawing of basic shapes in a :class:`Window`. """
 
     def __init__(self, window: Window) -> None:
         self._window = window
@@ -72,48 +67,8 @@ class Drawer:
                 self._fragment_shader,
             )
 
-    def primitive(
-        self,
-        vertices: Sequence[Coord2D] | Sequence[Coord3D],
-        primitive: PrimitiveShape,
-        color: Optional[Color | np.ndarray] = None,
-        transform: Optional[np.ndarray] = None,
-        before_draw: Optional[Callable[[], None]] = None,
-        fill_mode: FillMode = FillMode.FILL,
-    ):
-        """ Draws a set of vertices using an OpenGL primitive.
-
-        Args:
-            vertices: The vertices of the object to be drawn.
-            primitive: The OpenGL
-                [primitive](https://www.khronos.org/opengl/wiki/Primitive) to be
-                used as reference to connect the vertices.
-            fill_mode: Specifies how the drawn object should be filled.
-            color: The color of the object.
-            transform: 4x4 numpy array representing a transformation matrix to
-                be applied to the object. If not matrix is specified (`None`),
-                the identity matrix is used.
-            before_draw: Callback fired just before the actual drawing occurs.
-        """
-        # Prepare, validate and pre-process the vertices.
-        vertices = np.array(vertices, dtype=np.float32)
-        assert len(vertices.shape) == 2
-        assert vertices.shape[1] in (2, 3)
-        if vertices.shape[1] == 2:
-            vertices = np.hstack([
-                vertices,
-                np.zeros((vertices.shape[0], 1), dtype=np.float32),
-            ])
-
-        # Use the identity matrix if no transformation was specified.
-        transform = (np.eye(4, dtype=np.float32) if transform is None
-                     else transform.astype(np.float32))
-
-        # Set up a color if one wasn't provided.
-        color = (_DEFAULT_COLOR if color is None
-                 else np.array(color, dtype=np.float32))
-
-        # Render.
+    def __call__(self, obj: GraphicObject) -> None:
+        """ Draws a graphic object in the drawer's window. """
         with self._window:
             # Activate the shader program.
             gl.glUseProgram(self._shader_program)
@@ -126,8 +81,8 @@ class Drawer:
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self._vbo)
             gl.glBufferData(
                 gl.GL_ARRAY_BUFFER,
-                vertices.nbytes,
-                vertices,
+                obj.vertices.nbytes,
+                obj.vertices,
                 gl.GL_DYNAMIC_DRAW,
             )
 
@@ -140,156 +95,71 @@ class Drawer:
                 3,
                 gl.GL_FLOAT,
                 False,
-                vertices.strides[0],
+                obj.vertices.strides[0],
                 ctypes.c_void_p(0),
             )
 
             # Set the transformation matrix.
             transform_attr_loc = gl.glGetUniformLocation(self._shader_program,
                                                          "transform")
-            gl.glUniformMatrix4fv(transform_attr_loc, 1, gl.GL_TRUE, transform)
+            gl.glUniformMatrix4fv(
+                transform_attr_loc, 1, gl.GL_TRUE, obj.transform.matrix,
+            )
 
             # Set the color of our object.
             color_attr_loc = gl.glGetUniformLocation(self._shader_program,
                                                      "color")
-            gl.glUniform4f(color_attr_loc, *color)
+            gl.glUniform4f(color_attr_loc, *obj.color)
 
             # Specify how the object should be filled.
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, fill_mode.value)
+            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, obj.fill_mode.value)
 
             # Draw.
-            if before_draw is not None:
-                before_draw()
-            gl.glDrawArrays(primitive.value, 0, len(vertices))
+            if obj.on_draw is not None:
+                obj.on_draw()
+            gl.glDrawArrays(obj.primitive.value, 0, len(obj.vertices))
 
             # Clean up.
             gl.glDisableVertexAttribArray(pos_attr_loc)
             gl.glBindBuffer(gl.GL_ARRAY_BUFFER, 0)
             gl.glUseProgram(0)
 
-    def point(self,
-              pos: Coord2D | Coord3D | np.ndarray,
-              point_size: int = 1,
-              color: Optional[Color | np.ndarray] = None) -> None:
-        """ Draws a single point at the given position.
+    def dot(self, *args, **kwargs) -> None:
+        """ Draws a dot at the given position.
 
-        Args:
-            pos: The point's coordinates.
-            point_size: The point's size. It will be capped at a maximum size
-                specified by the current OpenGL's implementation.
-            color: The point's color.
+        This method has the same parameters as `__init__()` method of
+        :class:`Dot`.
         """
-        self.primitive(
-            vertices=[pos],
-            primitive=gl.GL_POINTS,
-            color=color,
-            before_draw=lambda: gl.glPointSize(point_size),
-        )
+        self(Dot(*args, **kwargs))
 
-    def line(self,
-             pos: (tuple[Coord2D, Coord2D] |
-                   tuple[Coord3D, Coord3D] |
-                   np.ndarray),
-             line_width: int = 1,
-             color: Optional[Color | np.ndarray] = None) -> None:
+    def line(self, *args, **kwargs) -> None:
         """ Draws a line.
 
-        Args:
-            pos: Tuple or numpy array containing the coordinates of two points
-                in the line.
-            line_width: The width of the line. It will be capped at a maximum
-                size specified by the current OpenGL's implementation.
-            color: The line's color.
+        This method has the same parameters as `__init__()` method of
+        :class:`Line`.
         """
-        self.primitive(
-            vertices=pos,
-            primitive=gl.GL_LINES,
-            color=color,
-            before_draw=lambda: gl.glLineWidth(line_width),
-        )
+        self(Line(*args, **kwargs))
 
-    def triangle(self,
-                 vertices: (tuple[Coord2D, Coord2D, Coord2D] |
-                            tuple[Coord3D, Coord3D, Coord3D] |
-                            np.ndarray),
-                 color: Optional[Color | np.ndarray] = None) -> None:
-        """ Draws a triangle from its vertices coordinates.
+    def triangle(self, *args, **kwargs) -> None:
+        """ Draws a triangle.
 
-        Args:
-            vertices: The coordinates of the 3 vertices of the triangle.
-            color: The triangle's color.
+        This method has the same parameters as `__init__()` method of
+        :class:`Triangle`.
         """
-        self.primitive(vertices, gl.GL_TRIANGLES, color)
+        self(Triangle(*args, **kwargs))
 
-    def rect(self,
-             top_left: Coord2D | Coord3D | np.ndarray,
-             size: tuple[float, float] | np.ndarray,
-             color: Optional[Color | np.ndarray] = None) -> None:
+    def rect(self, *args, **kwargs) -> None:
         """ Draws a rectangle.
 
-        Args:
-            top_left: The coordinates of the rectangle's top-left vertex.
-            size: The rectangle's width and height relative to, respectively,
-                the window's width and height. Example: passing (0.5, 0.5) to
-                this parameter will draw a rectangle with width and height equal
-                to, respectively, half of the window's width and height.
-            color: The rectangle's color.
+        This method has the same parameters as `__init__()` method of
+        :class:`Rectangle`.
         """
-        size = np.array(size) * 2
-        top_left = np.array(top_left, dtype=np.float32)
-        other_vertices = np.array([
-            (top_left[0], top_left[1] - size[1]),            # bottom-left
-            (top_left[0] + size[0], top_left[1]),            # top-right
-            (top_left[0] + size[0], top_left[1] - size[1]),  # bottom-right
-        ], dtype=np.float32)
+        self(Rectangle(*args, **kwargs))
 
-        if len(top_left) == 3:
-            other_vertices = np.hstack([
-                other_vertices,
-                np.full([other_vertices.shape[0], 1],
-                        top_left[-1],
-                        dtype=np.float32),
-            ])
-
-        self.primitive(
-            vertices=np.vstack([top_left, other_vertices]),
-            primitive=gl.GL_TRIANGLE_STRIP,
-            color=color,
-        )
-
-    def circle(self,
-               center_pos: Coord2D | Coord3D | np.ndarray,
-               radius: float,
-               color: Optional[Color | np.ndarray] = None,
-               quality_level: int = 64) -> None:
+    def circle(self, *args, **kwargs) -> None:
         """ Draws a circle.
 
-        Args:
-            center_pos: The coordinates of the circle's center.
-            radius: The circle's radius.
-            color: The circle's color.
-            quality_level: An integer related to the quality of the drawn
-                circle. Greater values mean higher quality.
+        This method has the same parameters as `__init__()` method of
+        :class:`Circle`.
         """
-        vertices = []
-        inc = 2 * math.pi / quality_level
-        for i in range(quality_level):
-            angle = i * inc
-            x = math.cos(angle) * radius + center_pos[0]
-            y = math.sin(angle) * radius + center_pos[1]
-            vertices.append((x, y))
-
-        vertices = np.array(vertices, dtype=np.float32)
-        if len(center_pos) == 3:
-            vertices = np.hstack([
-                vertices,
-                np.full([vertices.shape[0], 1],
-                        center_pos[-1],
-                        dtype=np.float32),
-            ])
-
-        self.primitive(
-            vertices=vertices,
-            primitive=gl.GL_TRIANGLE_FAN,
-            color=color,
-        )
+        self(Circle(*args, **kwargs))
