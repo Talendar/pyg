@@ -18,3 +18,4 @@ from pyg.enums.events import Key, KeyboardAction
 from pyg.enums.fill_mode import FillMode
 from pyg.enums.primitive_shape import PrimitiveShape
 from pyg import objects
+from pyg import utils

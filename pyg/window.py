@@ -28,7 +28,7 @@ class Window:
         self._glfw_window = glfw.create_window(width, height, name, None, None)
 
         # Tell OpenGL the initial size of the window.
-        gl.glViewport(0, 0, width, height)
+        gl.glViewport(0, 0, *self.size)
 
         # Set up a callback to update OpenGL's viewport when the window is
         # resized.
@@ -167,3 +167,9 @@ class Window:
             callback(Key(key), KeyboardAction(action))
 
         glfw.set_key_callback(self._glfw_window, callback_wrapper)
+
+    def get_key_state(self, key: Key) -> KeyboardAction:
+        """ Returns the last known state (pressed or released) of the given
+        keyboard key in this window.
+        """
+        return KeyboardAction(glfw.get_key(self._glfw_window, key.value))
