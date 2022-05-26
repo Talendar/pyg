@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Any
+from typing import Optional, Any, TypeVar, Generic
 from types import TracebackType
 from collections.abc import Callable
 
@@ -12,9 +12,13 @@ import OpenGL.GL as gl
 
 from pyg.drawer import Drawer
 from pyg.enums.events import Key, KeyboardAction
+from pyg.cameras import Camera, SimpleCamera
 
 
-class Window:
+C = TypeVar("C", bound=Camera)
+
+
+class Window(Generic[C]):
     """ Represents a window in the application.
 
     In most scenarios, you will only need a single window for the app. Creating
@@ -23,9 +27,15 @@ class Window:
     window per process).
     """
 
-    def __init__(self, width: int, height: int, name: str = "My app") -> None:
+    def __init__(self,
+                 width: int,
+                 height: int,
+                 name: str = "My app",
+                 depth_testing: bool = False,
+                 camera: Optional[C] = None) -> None:
         self._name = name
         self._glfw_window = glfw.create_window(width, height, name, None, None)
+        self._camera = camera or SimpleCamera(window=self)
 
         # Tell OpenGL the initial size of the window.
         gl.glViewport(0, 0, *self.size)
@@ -43,26 +53,35 @@ class Window:
         # Instantiate a drawer.
         self._drawer = Drawer(self)
 
+        # Enable depth testing.
+        if depth_testing:
+            with self:
+                gl.glEnable(gl.GL_DEPTH_TEST)
+
     @property
     def size(self) -> tuple[int, int]:
         return glfw.get_window_size(self._glfw_window)
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    @property
-    def draw(self) -> Drawer:
-        return self._drawer
 
     @size.setter
     def size(self, new_size: tuple[int, int]) -> None:
         glfw.set_window_size(self._glfw_window, *new_size)
 
+    @property
+    def name(self) -> str:
+        return self._name
+
     @name.setter
     def name(self, new_name: str) -> None:
         self._name = new_name
         glfw.set_window_title(self._glfw_window, self._name)
+
+    @property
+    def draw(self) -> Drawer:
+        return self._drawer
+
+    @property
+    def camera(self) -> C:
+        return self._camera
 
     def __enter__(self) -> Window:
         """ Makes this window the current OpenGL context. """
@@ -105,7 +124,7 @@ class Window:
         """ Clears the screen using the given color. """
         with self:
             gl.glClearColor(*color)
-            gl.glClear(gl.GL_COLOR_BUFFER_BIT)
+            gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
 
     def poll_events(self) -> None:
         """ Processes the events that are already in the event queue, then
@@ -152,8 +171,8 @@ class Window:
             glfw.post_empty_event()
 
     def set_key_callback(
-            self,
-            callback: Callable[[Key, KeyboardAction], None],
+        self,
+        callback: Callable[[Key, KeyboardAction], None],
     ) -> None:
         """ Set up a callback to be fired when a physical key is pressed or
         released or when it repeats.
@@ -173,3 +192,34 @@ class Window:
         keyboard key in this window.
         """
         return KeyboardAction(glfw.get_key(self._glfw_window, key.value))
+
+    def set_cursor_pos_callback(
+        self,
+        callback: Callable[[float, float], None],
+    ) -> None:
+        """ Set up a callback to be fired when the mouse's cursor moves over the
+        window.
+        """
+        # pylint: disable=W0613
+        def callback_wrapper(glfw_window: Any,
+                             x_pos: float,
+                             y_pos: float) -> None:
+            callback(x_pos, y_pos)
+
+        glfw.set_cursor_pos_callback(self._glfw_window, callback_wrapper)
+
+    def set_scroll_callback(
+            self,
+            callback: Callable[[float], None],
+    ) -> None:
+        """ Set up a callback to be fired when the mouse's scrolling wheel is
+        "rolled".
+        """
+
+        # pylint: disable=W0613
+        def callback_wrapper(glfw_window: Any,
+                             x_pos: float,
+                             y_pos: float) -> None:
+            callback(y_pos)
+
+        glfw.set_scroll_callback(self._glfw_window, callback_wrapper)

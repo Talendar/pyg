@@ -11,9 +11,9 @@ from game_objects import Spaceship, BlackHole, Planet, Star, Asteroid
 
 
 _MAX_FPS = 60
-_WINDOW_SIZE = (1600, 1000)
-_NUM_STARS = 50
-_ASTEROID_SPAWN_TIME = 1.5
+_WINDOW_SIZE = (1000, 1000)
+_NUM_STARS = 25
+_ASTEROID_SPAWN_TIME = 1.75
 
 
 if __name__ == "__main__":

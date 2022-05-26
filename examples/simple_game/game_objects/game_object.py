@@ -19,7 +19,7 @@ class GameObject(ABC):
     """ Abstract class representing an object in the game. """
 
     def __init__(self,
-                 all_graphics: list[pyg.objects.GraphicObject],
+                 all_graphics: list[pyg.objects.SimpleGraphicObject],
                  initial_pos: pyg.utils.Coord2D = (0, 0),
                  initial_scale: float = 1.0) -> None:
         self._x, self._y = (0.0, 0.0)
@@ -47,7 +47,7 @@ class GameObject(ABC):
         return self._y
 
     @property
-    def graphics(self) -> list[pyg.objects.GraphicObject]:
+    def graphics(self) -> list[pyg.objects.SimpleGraphicObject]:
         """ List with the graphic objects that compose this object. """
         return self._all_graphics
 

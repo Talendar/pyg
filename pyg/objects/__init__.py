@@ -2,8 +2,10 @@
 """
 
 from .graphic_object import GraphicObject
+from .simple_graphic_object import SimpleGraphicObject
 from .dot import Dot
 from .line import Line
 from .triangle import Triangle
 from .rectangle import Rectangle
 from .circle import Circle
+from .cube import Cube

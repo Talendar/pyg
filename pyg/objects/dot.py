@@ -2,18 +2,18 @@
 """
 
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Any
 
 import numpy as np
 import OpenGL.GL as gl
 
-from pyg.objects.graphic_object import GraphicObject
+from pyg.objects.simple_graphic_object import SimpleGraphicObject
 from pyg.enums.fill_mode import FillMode
 from pyg.enums.primitive_shape import PrimitiveShape
 from pyg.utils import Coord2D, Coord3D, Color
 
 
-class Dot(GraphicObject):
+class Dot(SimpleGraphicObject):
     """ Graphic object representing a dot.
 
     Wraps OpenGL's "POINTS" primitive.
@@ -34,10 +34,14 @@ class Dot(GraphicObject):
                 used.
             fill_mode: Specifies how the object should be filled.
         """
+        self._size = size
         super().__init__(
             vertices=[pos],
             primitive=PrimitiveShape.POINTS,
             color=color,
             fill_mode=fill_mode,
-            on_draw=lambda: gl.glPointSize(size)
         )
+
+    def draw(self, color_loc: Any) -> None:
+        gl.glPointSize(self._size)
+        super().draw(color_loc)

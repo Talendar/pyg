@@ -2,18 +2,18 @@
 """
 
 from __future__ import annotations
-from typing import Optional
+from typing import Optional, Any
 
 import numpy as np
 import OpenGL.GL as gl
 
-from pyg.objects.graphic_object import GraphicObject
+from pyg.objects.simple_graphic_object import SimpleGraphicObject
 from pyg.enums.primitive_shape import PrimitiveShape
 from pyg.utils import Coord2D, Coord3D, Color
 from pyg.enums.fill_mode import FillMode
 
 
-class Line(GraphicObject):
+class Line(SimpleGraphicObject):
     """ Graphic object representing a line.
 
     Wraps OpenGL's "LINES" primitive.
@@ -37,10 +37,14 @@ class Line(GraphicObject):
                 used.
             fill_mode: Specifies how the object should be filled.
         """
+        self._width = line_width
         super().__init__(
             vertices=pos,
             primitive=PrimitiveShape.LINES,
             color=color,
             fill_mode=fill_mode,
-            on_draw=lambda: gl.glLineWidth(line_width),
         )
+
+    def draw(self, color_loc: Any) -> None:
+        gl.glLineWidth(self._width)
+        super().draw(color_loc)

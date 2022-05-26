@@ -6,13 +6,13 @@ from typing import Optional
 
 import numpy as np
 
-from pyg.objects.graphic_object import GraphicObject
+from pyg.objects.simple_graphic_object import SimpleGraphicObject
 from pyg.enums.primitive_shape import PrimitiveShape
 from pyg.enums.fill_mode import FillMode
 from pyg.utils import Coord2D, Coord3D, Color
 
 
-class Rectangle(GraphicObject):
+class Rectangle(SimpleGraphicObject):
     """ Graphic object representing a rectangle. """
 
     def __init__(self,

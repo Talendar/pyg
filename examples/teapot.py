@@ -1757,10 +1757,11 @@ if __name__ == "__main__":
     # Create and show a new window.
     window = pyg.Window(800, 800)
     window.name = "Utah teapot"
+    window.camera.incline(0, -110)
     window.show()
 
     # Instantiate the graphic object representing the teapot.
-    teapot = pyg.objects.GraphicObject(
+    teapot = pyg.objects.SimpleGraphicObject(
         vertices=TEAPOT_VERTICES,
         primitive=pyg.PrimitiveShape.TRIANGLES,
         fill_mode=FILL_MODE,

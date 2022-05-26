@@ -186,7 +186,7 @@ class Spaceship(GameObject):
         )
 
     @property
-    def graphics(self) -> list[pyg.objects.GraphicObject]:
+    def graphics(self) -> list[pyg.objects.SimpleGraphicObject]:
         """ List with all the graphic objects associated with this game object
         that should be rendered.
         """

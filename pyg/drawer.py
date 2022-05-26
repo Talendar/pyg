@@ -21,10 +21,13 @@ _VERTEX_SHADER_SRC: Final[str] = """
     #version 330 core
     
     attribute vec3 pos;
-    uniform mat4 transform;
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+
     
     void main() {
-        gl_Position = transform * vec4(pos, 1.0);
+        gl_Position = projection * view * model * vec4(pos, 1.0);
     }
 """
 
@@ -99,25 +102,33 @@ class Drawer:
                 ctypes.c_void_p(0),
             )
 
-            # Set the transformation matrix.
-            transform_attr_loc = gl.glGetUniformLocation(self._shader_program,
-                                                         "transform")
+            # Set the object's model matrix.
             gl.glUniformMatrix4fv(
-                transform_attr_loc, 1, gl.GL_TRUE, obj.transform.matrix,
+                gl.glGetUniformLocation(self._shader_program, "model"),
+                1,
+                gl.GL_TRUE,
+                obj.model_matrix,
             )
 
-            # Set the color of our object.
-            color_attr_loc = gl.glGetUniformLocation(self._shader_program,
-                                                     "color")
-            gl.glUniform4f(color_attr_loc, *obj.color)
+            # Set the window's view matrix.
+            gl.glUniformMatrix4fv(
+                gl.glGetUniformLocation(self._shader_program, "view"),
+                1,
+                gl.GL_TRUE,
+                self._window.camera.view_matrix,
+            )
 
-            # Specify how the object should be filled.
-            gl.glPolygonMode(gl.GL_FRONT_AND_BACK, obj.fill_mode.value)
+            # Set the window's projection matrix.
+            gl.glUniformMatrix4fv(
+                gl.glGetUniformLocation(self._shader_program, "projection"),
+                1,
+                gl.GL_TRUE,
+                self._window.camera.projection_matrix,
+            )
 
             # Draw.
-            if obj.on_draw is not None:
-                obj.on_draw()
-            gl.glDrawArrays(obj.primitive.value, 0, len(obj.vertices))
+            color_loc = gl.glGetUniformLocation(self._shader_program, "color")
+            obj.draw(color_loc)
 
             # Clean up.
             gl.glDisableVertexAttribArray(pos_attr_loc)
