@@ -20,6 +20,7 @@ setup(
         "PyOpenGL==3.1.6",
         "PyOpenGL-accelerate==3.1.5",
         "glfw==2.5.1",
+        "Pillow==9.1.1",
     ],
     extras_require={
         "dev": [

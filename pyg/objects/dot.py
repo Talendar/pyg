@@ -42,6 +42,8 @@ class Dot(SimpleGraphicObject):
             fill_mode=fill_mode,
         )
 
-    def draw(self, color_loc: Any) -> None:
+    def draw(self,
+             color_loc: Optional[Any] = None,
+             texture_coord_loc: Optional[Any] = None) -> None:
         gl.glPointSize(self._size)
         super().draw(color_loc)

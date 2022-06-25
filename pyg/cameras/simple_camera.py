@@ -30,7 +30,7 @@ class SimpleCamera(Camera):
                 y_offset: float,
                 constrain_pitch: bool = True) -> None:
         self._yaw += x_offset * self.mouse_sensitivity
-        self._pitch += y_offset * self.mouse_sensitivity
+        self._pitch -= y_offset * self.mouse_sensitivity
         if constrain_pitch:
             self._pitch = max(min(self._pitch, 90), -90)
         self._update_vectors()

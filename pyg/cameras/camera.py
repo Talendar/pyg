@@ -18,7 +18,7 @@ class Camera(abc.ABC):
     """ Abstract class representing a camera. """
 
     def __init__(self,
-                 pos: Coord3D = (0, 0, 0),
+                 pos: Coord3D = (0, 0, 2.5),
                  up: Coord3D = (0, 1, 0),
                  front: Coord3D = (0, 0, -1),
                  yaw: float = -90,
@@ -57,16 +57,12 @@ class Camera(abc.ABC):
                 "Attempt to build a projection matrix in a camera with no "
                 "window!"
             )
-        # noinspection PyArgumentList
         return np.array(
-            glm.translate(
-                glm.perspective(
-                    glm.radians(self._fov),
-                    self._window.size[0] / self._window.size[1],
-                    0.1,
-                    100,
-                ),
-                glm.vec3(0, 0, -2.5),
+            glm.perspective(
+                glm.radians(self._fov),
+                self._window.size[0] / self._window.size[1],
+                0.1,
+                100,
             ),
         )
 

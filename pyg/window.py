@@ -15,6 +15,7 @@ from pyg.enums.events import Key, KeyboardAction
 from pyg.cameras import Camera, SimpleCamera
 
 
+#: Generic variable indicating a subclass of the `Camera` class.
 C = TypeVar("C", bound=Camera)
 
 
@@ -31,6 +32,7 @@ class Window(Generic[C]):
                  width: int,
                  height: int,
                  name: str = "My app",
+                 use_textures: bool = False,
                  depth_testing: bool = False,
                  camera: Optional[C] = None) -> None:
         self._name = name
@@ -39,6 +41,10 @@ class Window(Generic[C]):
 
         # Tell OpenGL the initial size of the window.
         gl.glViewport(0, 0, *self.size)
+
+        # Enable 2D textures.
+        if use_textures:
+            gl.glEnable(gl.GL_TEXTURE_2D)
 
         # Set up a callback to update OpenGL's viewport when the window is
         # resized.
@@ -51,7 +57,7 @@ class Window(Generic[C]):
                                            win_resize_callback)
 
         # Instantiate a drawer.
-        self._drawer = Drawer(self)
+        self._drawer = Drawer(self, use_textures)
 
         # Enable depth testing.
         if depth_testing:

@@ -69,11 +69,9 @@ def load_wavefront(pathname: str,
             # Extract vertices.
             if values[0] == "v":
                 model["vertices"].append(values[1:4])
-
             # Extract texture coordinates.
             elif values[0] == "vt":
                 model["texture"].append(values[1:3])
-
             # Extract faces.
             elif values[0] in ("usemtl", "usemat"):
                 material = values[1]

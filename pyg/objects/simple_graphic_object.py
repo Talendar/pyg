@@ -45,7 +45,10 @@ class SimpleGraphicObject(GraphicObject, Colored):
         self.color = color
         self.fill_mode = fill_mode
 
-    def draw(self, color_loc: Any) -> None:
+    def draw(self,
+             color_loc: Optional[Any] = None,
+             texture_coord_loc: Optional[Any] = None) -> None:
+        assert color_loc is not None
         gl.glUniform4f(color_loc, *self.color)
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, self.fill_mode.value)
         gl.glDrawArrays(self.primitive.value, 0, len(self.vertices))

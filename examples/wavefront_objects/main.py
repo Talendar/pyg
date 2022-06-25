@@ -1,4 +1,4 @@
-""" Load and display Wavefront objects.
+""" Load and display Wavefront objects using `pyg`.
 """
 
 import time
@@ -8,7 +8,7 @@ import pyg
 
 
 CAMERA_MOV_SPEED = 10
-MOUSE_SENSITIVITY = 0.1
+MOUSE_SENSITIVITY = 0.2
 SCROLL_SENSITIVITY = 2
 
 
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     def handle_cursor_pos_event(x_pos: float, y_pos: float) -> None:
         global last_cursor_pos
         if last_cursor_pos == (None, None):
-            last_cursor_pos = (x_pos, y_pos)
+            last_cursor_pos = (window.size[0] / 2, window.size[1] / 2)
 
         window.camera.incline(x_offset=x_pos - last_cursor_pos[0],
                               y_offset=y_pos - last_cursor_pos[1])
@@ -109,5 +109,3 @@ if __name__ == "__main__":
         window.update()
         time.sleep(1 / 30)
         last_render = timer()
-
-

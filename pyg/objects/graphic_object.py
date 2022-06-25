@@ -79,13 +79,25 @@ class GraphicObject(abc.ABC):
         return self._transformation_handler.matrix
 
     @abc.abstractmethod
-    def draw(self, color_loc: Any) -> None:
+    def draw(self,
+             *,
+             color_loc: Optional[Any] = None,
+             texture_coord_loc: Optional[Any] = None) -> None:
         """ Draws the object in the current OpenGL window.
 
         When this method is called, the object's vertices must already be in the
         GPU. This method is responsible for specifying the object's color and
-        its fill mode, as well as drawing its vertices.
+        its fill mode or its texture, as well as drawing its vertices.
+
+        If textures are being used, then, when this method is called, the
+        current bound OpenGL buffer can be safely used to store the coordinates
+        of the object's texture.
 
         Args:
             color_loc: Location of the `color` attribute in the vertex shader.
+                This argument is only provided by the drawer if using textures
+                is disabled.
+            texture_coord_loc: Location of the vertex attribute associated with
+                the texture's coordinate. This argument is only provided by th
+                 drawer if using textures is enabled.
         """

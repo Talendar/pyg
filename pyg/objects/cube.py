@@ -66,7 +66,10 @@ class Cube(GraphicObject, Colored):
             ],
         )
 
-    def draw(self, color_loc: Any) -> None:
+    def draw(self,
+             color_loc: Optional[Any] = None,
+             texture_coord_loc: Optional[Any] = None) -> None:
+        assert color_loc is not None
         gl.glPolygonMode(gl.GL_FRONT_AND_BACK, self.fill_mode.value)
         for i in range(0, 24, 4):
             color = (
