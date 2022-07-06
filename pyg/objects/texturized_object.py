@@ -22,8 +22,10 @@ class TexturizedGraphicObject(GraphicObject):
     def __init__(self,
                  vertices: Sequence[Coord2D] | Sequence[Coord3D],
                  texture: Texture,
-                 initial_model: Optional[np.ndarray] = None) -> None:
+                 initial_model: Optional[np.ndarray] = None,
+                 primitive: PrimitiveShape = PrimitiveShape.TRIANGLES) -> None:
         self._texture = texture
+        self._primitive = primitive
         super().__init__(vertices=vertices, initial_model=initial_model)
 
     def draw(self,
@@ -52,11 +54,14 @@ class TexturizedGraphicObject(GraphicObject):
 
         # Bind the texture and draw the object.
         self._texture.bind()
-        gl.glDrawArrays(PrimitiveShape.TRIANGLES.value, 0, len(self.vertices))
+        gl.glDrawArrays(self._primitive.value, 0, len(self.vertices))
 
     @staticmethod
-    def from_file(file_path: str,
-                  texture_img_path: str) -> TexturizedGraphicObject:
+    def from_file(
+        file_path: str,
+        texture_img_path: str,
+        primitive: PrimitiveShape = PrimitiveShape.TRIANGLES,
+    ) -> TexturizedGraphicObject:
         """ Loads a texturized graphic object from a file.
 
         Args:
@@ -81,4 +86,5 @@ class TexturizedGraphicObject(GraphicObject):
                 coordinates=texture_coords,
                 img_path=texture_img_path,
             ),
+            primitive=primitive,
         )

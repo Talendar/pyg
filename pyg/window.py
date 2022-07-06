@@ -13,6 +13,7 @@ import OpenGL.GL as gl
 from pyg.drawer import Drawer
 from pyg.enums.events import Key, KeyboardAction
 from pyg.cameras import Camera, SimpleCamera
+from pyg.utils import Color
 
 
 #: Generic variable indicating a subclass of the `Camera` class.
@@ -126,7 +127,7 @@ class Window(Generic[C]):
         return glfw.window_should_close(self._glfw_window)
 
     def clear(self,
-              color: tuple[int, int, int, int] = (0, 0, 0, 1)) -> None:
+              color: Color = (0, 0, 0, 1)) -> None:
         """ Clears the screen using the given color. """
         with self:
             gl.glClearColor(*color)
